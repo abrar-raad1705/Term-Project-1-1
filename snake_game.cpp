@@ -155,18 +155,22 @@ void iDraw() {
 
 		// Up
 		int upY = titleY - 100;
+		iShowBMP(window_width / 2 - 80, upY+5, "up.bmp");
 		iText(window_width / 2 - 30, upY + 15, "Move Up", GLUT_BITMAP_HELVETICA_18);
 
 		// Down
 		int downY = upY - 60;
+		iShowBMP(window_width / 2 - 80, downY+5, "down.bmp");
 		iText(window_width / 2 - 30, downY + 15, "Move Down", GLUT_BITMAP_HELVETICA_18);
 
 		// Left
 		int leftY = downY - 60;
+		iShowBMP(window_width / 2 - 80, leftY+5, "left.bmp");
 		iText(window_width / 2 - 30, leftY + 15, "Move Left", GLUT_BITMAP_HELVETICA_18);
 
 		// Right
 		int rightY = leftY - 60;
+		iShowBMP(window_width / 2 - 80, rightY+5, "right.bmp");
 		iText(window_width / 2 - 30, rightY + 15, "Move Right", GLUT_BITMAP_HELVETICA_18);
 
 		iText(game_width/2+130, 10, "Press 'M' to go back to Menu", GLUT_BITMAP_9_BY_15);
@@ -216,7 +220,7 @@ void iDraw() {
 			iSetColor(255, 255, 255);
 			char scoreText[100];
 			sprintf(scoreText, "Score: %d", score);
-			iText(10, game_height + 20, scoreText, GLUT_BITMAP_TIMES_ROMAN_24);
+			iText(10, game_height + 30, scoreText, GLUT_BITMAP_TIMES_ROMAN_24);
 
 			if(play_state == classic_revisited){
 				//Draw the auto snake
@@ -234,7 +238,7 @@ void iDraw() {
 				iSetColor(255, 255, 255);
 				char scoreText[100];
 				sprintf(scoreText, "Score: %d", score);
-				iText(10, game_height + 20, scoreText, GLUT_BITMAP_TIMES_ROMAN_24);
+				iText(10, game_height + 30, scoreText, GLUT_BITMAP_TIMES_ROMAN_24);
 			}
 
 			else if(play_state == box){
