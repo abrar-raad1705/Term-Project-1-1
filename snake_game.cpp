@@ -401,7 +401,7 @@ void iSpecialKeyboard(unsigned char key) {
 
 int main() {
 	srand(time(0));
-	iInitialize(window_width, window_height, "Snake Xenzia V1.0");
+	iInitialize(window_width, window_height, "Snake Xenzia V1.1");
 	return 0;
 }
 
