@@ -56,7 +56,7 @@ int bonus_start_time;
 int bonus_duration = 7000;
 int bonus_activation_k = 5;
 
-void game_start();
+void game_start(); // Resets the game
 void init_snake(); // Initializes snake position
 
 void snake_move(); // Moves the snake
@@ -113,31 +113,31 @@ void iDraw() {
 
         // Draw the title
         iSetColor(245, 245, 220);
-        int titleY = window_height / 2 + 150;
-        iText(window_width / 2 - 60, titleY, "Game Type", GLUT_BITMAP_TIMES_ROMAN_24);
+        int title_y = window_height / 2 + 150;
+        iText(window_width / 2 - 60, title_y, "Game Type", GLUT_BITMAP_TIMES_ROMAN_24);
 
         // Game Types
         iSetColor(245, 245, 220);
 
         // Classic
-        int classicY = titleY - 100;
-        iRectangle(window_width / 2 - 100, classicY, 200, 40);
-        iText(window_width / 2 - 30, classicY + 15, "Classic", GLUT_BITMAP_HELVETICA_18);
+        int classic_y = title_y - 100;
+        iRectangle(window_width / 2 - 100, classic_y, 200, 40);
+        iText(window_width / 2 - 30, classic_y + 15, "Classic", GLUT_BITMAP_HELVETICA_18);
 
         // Classic Revisited
-        int classicRevisitedY = classicY - 60;
-        iRectangle(window_width / 2 - 100, classicRevisitedY, 200, 40);
-        iText(window_width / 2 - 67, classicRevisitedY + 15, "Classic Revisited", GLUT_BITMAP_HELVETICA_18);
+        int classicRevisited_y = classic_y - 60;
+        iRectangle(window_width / 2 - 100, classicRevisited_y, 200, 40);
+        iText(window_width / 2 - 67, classicRevisited_y + 15, "Classic Revisited", GLUT_BITMAP_HELVETICA_18);
 
         // Box
-        int boxY = classicRevisitedY - 60;
-        iRectangle(window_width / 2 - 100, boxY, 200, 40);
-        iText(window_width / 2 - 17, boxY + 15, "Box", GLUT_BITMAP_HELVETICA_18);
+        int box_y = classicRevisited_y - 60;
+        iRectangle(window_width / 2 - 100, box_y, 200, 40);
+        iText(window_width / 2 - 17, box_y + 15, "Box", GLUT_BITMAP_HELVETICA_18);
 
         // Campaign
-        int campaignY = boxY - 60;
-        iRectangle(window_width / 2 - 100, campaignY, 200, 40);
-        iText(window_width / 2 - 40, campaignY + 15, "Campaign", GLUT_BITMAP_HELVETICA_18);
+        int campaign_y = box_y - 60;
+        iRectangle(window_width / 2 - 100, campaign_y, 200, 40);
+        iText(window_width / 2 - 40, campaign_y + 15, "Campaign", GLUT_BITMAP_HELVETICA_18);
     }
 
 	else if(game_state == controls){
@@ -147,14 +147,14 @@ void iDraw() {
 
 		// Draw the title
 		iSetColor(245, 245, 220);
-		int titleY = window_height / 2 + 150;
-		iText(window_width / 2 - 45, titleY, "Controls", GLUT_BITMAP_TIMES_ROMAN_24);
+		int title_y = window_height / 2 + 150;
+		iText(window_width / 2 - 45, title_y, "Controls", GLUT_BITMAP_TIMES_ROMAN_24);
 
 		// Controls
 		iSetColor(245, 245, 220);
 
 		// Up
-		int upY = titleY - 100;
+		int upY = title_y - 100;
 		iShowBMP(window_width / 2 - 80, upY+5, "up.bmp");
 		iText(window_width / 2 - 30, upY + 15, "Move Up", GLUT_BITMAP_HELVETICA_18);
 
@@ -304,8 +304,8 @@ void iMouse(int button, int state, int mx, int my) {
         if(game_state == menu){
             // Start Game Button
             if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= window_height / 2 - 125 && my <= window_height / 2 - 85){
-				game_start();
                 game_state = start_game;
+				game_start();
             }
             // High Score Button
             else if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= window_height / 2 - 185 && my <= window_height / 2 - 145){
@@ -322,29 +322,29 @@ void iMouse(int button, int state, int mx, int my) {
         }
         // Game Type Selection Interaction
         else if (game_state == game_type) {
-            int titleY = window_height / 2 + 150;
-            int classicY = titleY - 100;
-            int classicRevisitedY = classicY - 60;
-            int boxY = classicRevisitedY - 60;
-            int campaignY = boxY - 60;
+            int title_y = window_height / 2 + 150;
+            int classic_y = title_y - 100;
+            int classicRevisited_y = classic_y - 60;
+            int box_y = classicRevisited_y - 60;
+            int campaign_y = box_y - 60;
 
             // Classic Game Type
-            if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= classicY && my <= classicY + 40){
+            if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= classic_y && my <= classic_y + 40){
                 play_state = classic;
                 game_state = menu;  // Return to main menu
             }
             // Classic Revisited Game Type
-            else if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= classicRevisitedY && my <= classicRevisitedY + 40){
+            else if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= classicRevisited_y && my <= classicRevisited_y + 40){
                 play_state = classic_revisited;
                 game_state = menu;  // Return to main menu
             }
             // Box Game Type
-            else if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= boxY && my <= boxY + 40){
+            else if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= box_y && my <= box_y + 40){
                 play_state = box;
                 game_state = menu;  // Return to main menu
             }
             // Campaign Game Type
-            else if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= campaignY && my <= campaignY + 40){
+            else if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= campaign_y && my <= campaign_y + 40){
                 play_state = campaign;
                 game_state = menu;  // Return to main menu
             }
@@ -363,6 +363,9 @@ void iKeyboard(unsigned char key) {
 		}
 		else exit(0);
     }
+	if(key == 'm' || key == 'M'){
+		game_state = menu;
+	}
     if(key == ' ' && is_paused == 0){
         is_paused = 1;
 		iPauseTimer(s);
@@ -373,9 +376,6 @@ void iKeyboard(unsigned char key) {
 		iResumeTimer(s);
 		if(play_state == classic_revisited)iResumeTimer(as);
     }
-	if(key == 'm' || key == 'M'){
-		game_state = menu;
-	}
 }
 
 /*
@@ -405,7 +405,7 @@ void iSpecialKeyboard(unsigned char key) {
 
 int main() {
 	srand(time(0));
-	iInitialize(window_width, window_height, "Snake Xenzia V1.1");
+	iInitialize(window_width, window_height, "Snake Game V1.1");
 	return 0;
 }
 
