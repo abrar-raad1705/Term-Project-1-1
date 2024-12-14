@@ -1,6 +1,8 @@
 # include "iGraphics.h"
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
+#include <stdio.h>
 
 #define window_width 800
 #define window_height 680
@@ -11,15 +13,17 @@
 
 int is_gameover = 0;
 int is_paused = 0;
-int snake_speed = 200; // Initial speed
+int snake_speed = 200; // Default speed
 int snake_speed_inc_k = 200;
 int score = 0;
+bool musicOn = true;
 
 #define menu 0
 #define start_game 1
-#define high_score 2
+#define score_board 2
 #define game_type 3
 #define controls 4
+#define speed_level 5
 
 #define classic 0
 #define classic_revisited 1
@@ -56,6 +60,17 @@ int bonus_start_time;
 int bonus_duration = 7000;
 int bonus_activation_k = 5;
 
+char player_name[100];
+int name_len = 0;
+int name_input_mode = 0;
+int score_cnt = 5;
+int is_score_updated = 0;
+
+typedef struct{
+	char name[100];
+	int score;
+}str_score;
+
 void game_start(); // Resets the game
 void init_snake(); // Initializes snake position
 
@@ -71,46 +86,114 @@ void init_auto_snake(); // Initializes auto snake
 void auto_snake_move(); // Moves the auto snake
 int as = iSetTimer(snake_speed, auto_snake_move);
 
+int load_score(str_score topScores[]);
+void save_score(str_score topScores[], int score_cnt);
+void update_score(char player_name[], int score);
+
 void iDraw() {
     iClear();
 
 	if(game_state == menu){
-        // Draw the menu background
-        iSetColor(44, 51, 29);
-        iFilledRectangle(0, 0, window_width, window_height);
-		iShowBMP(window_width/2 - 127, window_height/2, "game_logo.bmp");
-
-        // Draw the title
-        iSetColor(245, 245, 220);
-        iText(window_width / 2 - 130, window_height/2 - 30, "Old Snake Game Revisited", GLUT_BITMAP_TIMES_ROMAN_24);
+		iShowBMP(0, 0, "bg.bmp");
+		iShowBMP2(window_width/2 - 180, window_height/2, "logo.bmp", 0);
 
         // Draw menu options
         iSetColor(245, 245, 220);
 
+		int y_pos = window_height / 2 - 65;
         // Start Game
-        iRectangle(window_width / 2 - 100, window_height/2 - 125, 200, 40);
-        iText(window_width / 2 - 45, window_height/2 - 110, "Start Game", GLUT_BITMAP_HELVETICA_18);
+		iSetColor(255, 250, 205);
+        iFilledRectangle(window_width / 2 - 100, y_pos, 200, 40);
+		iSetColor(44, 44, 44);
+        iText(window_width / 2 - 45, y_pos + 15, "Start Game", GLUT_BITMAP_HELVETICA_18);
+		iRectangle(window_width / 2 - 100 , y_pos, 200, 40);
 
-        // High Score
-        iRectangle(window_width / 2 - 100, window_height/2 - 185, 200, 40);
-        iText(window_width / 2 - 45, window_height/2 - 170, "High Score", GLUT_BITMAP_HELVETICA_18);
+        // Score Board
+		iSetColor(255, 250, 205);
+        iFilledRectangle(window_width / 2 - 100, y_pos - 60, 200, 40);
+		iSetColor(44, 44, 44);
+        iText(window_width / 2 - 48, y_pos - 60 + 15, "Scoreboard", GLUT_BITMAP_HELVETICA_18);
+        iRectangle(window_width / 2 - 100, y_pos - 60, 200, 40);
 
         // Game Type
-        iRectangle(window_width / 2 - 100, window_height/2 - 245, 200, 40);
-        iText(window_width / 2 - 45, window_height/2 - 230, "Game Type", GLUT_BITMAP_HELVETICA_18);
+		iSetColor(255, 250, 205);
+        iFilledRectangle(window_width / 2 - 100, y_pos - 120, 200, 40);
+		iSetColor(44, 44, 44);
+        iText(window_width / 2 - 48, y_pos - 120 + 15, "Game Type", GLUT_BITMAP_HELVETICA_18);
+        iRectangle(window_width / 2 - 100, y_pos - 120, 200, 40);
+
+		// Speed Level
+		iSetColor(255, 250, 205);
+		iFilledRectangle(window_width / 2 - 100, y_pos - 180, 200, 40);
+		iSetColor(44, 44, 44);
+        iText(window_width / 2 - 50, y_pos - 180 + 15, "Speed Level", GLUT_BITMAP_HELVETICA_18);
+		iRectangle(window_width / 2 - 100, y_pos - 180, 200, 40);
 
         // Controls
-        iRectangle(window_width / 2 - 100, window_height/2 - 305, 200, 40);
-        iText(window_width / 2 - 37, window_height/2 - 290, "Controls", GLUT_BITMAP_HELVETICA_18);
+		iSetColor(255, 250, 205);
+        iFilledRectangle(window_width / 2 - 100, y_pos - 240, 200, 40);
+		iSetColor(44, 44, 44);
+        iText(window_width / 2 - 50, y_pos - 240 + 15, "Instructions", GLUT_BITMAP_HELVETICA_18);
+        iRectangle(window_width / 2 - 100, y_pos - 240, 200, 40);
 
+		iSetColor(255, 255, 255);
 		iText(game_width/2+250, 10, "Press 'Q' to exit", GLUT_BITMAP_8_BY_13);
+
+		if (name_input_mode == 1) {
+			iSetColor(0, 0, 0);
+			iFilledRectangle(0, 0, window_width, window_height);
+
+			// Draw textbox
+			iSetColor(255, 255, 255);
+			iRectangle(window_width / 2 - 125, window_height / 2 - 20, 250, 40);
+			iText(window_width / 2 - 70, window_height / 2 + 30, "Enter Your Name:", GLUT_BITMAP_HELVETICA_18);
+
+			// Display the name
+			iSetColor(255, 255, 255);
+			iText(window_width / 2 - 115, window_height / 2 - 5, player_name, GLUT_BITMAP_HELVETICA_18);
+
+			iText(window_width / 2 - 85, window_height / 2 - 50, "Press 'Enter' to start", GLUT_BITMAP_8_BY_13);
+
+			//Game state
+			char state[100];
+			if(play_state == classic){
+				strcpy(state, " Classic");
+			}
+			else if(play_state == classic_revisited){
+				strcpy(state, " Classic Revisited");
+			}
+			else if(play_state == box){
+				strcpy(state, " Box");
+			}
+			else if(play_state == campaign){
+				strcpy(state, " Campaign");
+			}
+			char level[100];
+			if(snake_speed == 200){
+				strcpy(level, " Low");
+			}
+			else if(snake_speed == 150){
+				strcpy(level, " Medium");
+			}
+			else if(snake_speed == 100){
+				strcpy(level, " High");
+			}
+			iSetColor(255, 255, 255);
+			iText(window_width / 2 - 70, window_height / 2 - 120, "Your Game:", GLUT_BITMAP_8_BY_13);
+			iText(window_width / 2 - 70, window_height / 2 - 140, "Speed Level:", GLUT_BITMAP_8_BY_13);
+			iSetColor(255, 0, 0);
+			iText(window_width / 2 + 5, window_height / 2 - 121, state, GLUT_BITMAP_8_BY_13);
+			iText(window_width / 2 + 22, window_height / 2 - 141, level, GLUT_BITMAP_8_BY_13);
+
+			iSetColor(255, 51, 51);
+			iFilledRectangle(window_width / 2 + 250, window_height / 2 - 320, 100, 40);
+			iSetColor(255, 255, 255);
+			iText(window_width / 2 + 278, window_height / 2 - 305, "Menu", GLUT_BITMAP_HELVETICA_18);
+		}
     }
 
 	else if(game_state == game_type){
-        // Draw the game type selection menu
-        iSetColor(44, 51, 29);
-        iFilledRectangle(0, 0, window_width, window_height);
-
+		iShowBMP(0, 0, "bg.bmp");
         // Draw the title
         iSetColor(245, 245, 220);
         int title_y = window_height / 2 + 150;
@@ -121,59 +204,137 @@ void iDraw() {
 
         // Classic
         int classic_y = title_y - 100;
-        iRectangle(window_width / 2 - 100, classic_y, 200, 40);
+		iSetColor(255, 250, 205);
+        iFilledRectangle(window_width / 2 - 100, classic_y, 200, 40);
+		iSetColor(44, 44, 44);
         iText(window_width / 2 - 30, classic_y + 15, "Classic", GLUT_BITMAP_HELVETICA_18);
 
         // Classic Revisited
         int classicRevisited_y = classic_y - 60;
-        iRectangle(window_width / 2 - 100, classicRevisited_y, 200, 40);
+		iSetColor(255, 250, 205);
+        iFilledRectangle(window_width / 2 - 100, classicRevisited_y, 200, 40);
+		iSetColor(44, 44, 44);
         iText(window_width / 2 - 67, classicRevisited_y + 15, "Classic Revisited", GLUT_BITMAP_HELVETICA_18);
 
         // Box
         int box_y = classicRevisited_y - 60;
-        iRectangle(window_width / 2 - 100, box_y, 200, 40);
+		iSetColor(255, 250, 205);
+        iFilledRectangle(window_width / 2 - 100, box_y, 200, 40);
+		iSetColor(44, 44, 44);
         iText(window_width / 2 - 17, box_y + 15, "Box", GLUT_BITMAP_HELVETICA_18);
 
         // Campaign
         int campaign_y = box_y - 60;
-        iRectangle(window_width / 2 - 100, campaign_y, 200, 40);
+		iSetColor(255, 250, 205);
+        iFilledRectangle(window_width / 2 - 100, campaign_y, 200, 40);
+		iSetColor(44, 44, 44);
         iText(window_width / 2 - 40, campaign_y + 15, "Campaign", GLUT_BITMAP_HELVETICA_18);
+
+		iSetColor(230, 230, 230);
+		iFilledRectangle(window_width / 2 + 250, window_height / 2 - 320, 100, 40);
+		iSetColor(255, 51, 51);
+		iText(window_width / 2 + 278, window_height / 2 - 305, "Menu", GLUT_BITMAP_HELVETICA_18);
+    }
+
+	else if(game_state == speed_level){
+        iShowBMP(0, 0, "bg.bmp");
+
+        // Draw the title
+        iSetColor(245, 245, 220);
+        iText(window_width / 2 - 60, window_height / 2 + 150, "Speed Level", GLUT_BITMAP_TIMES_ROMAN_24);
+
+        // Low Speed
+        int y_pos = window_height / 2 + 50;
+		iSetColor(255, 250, 205);
+        iFilledRectangle(window_width / 2 - 100, y_pos, 200, 40);
+		iSetColor(44, 44, 44);
+        iText(window_width / 2 - 20, y_pos + 15, "Low", GLUT_BITMAP_HELVETICA_18);
+
+        // Medium Speed
+		iSetColor(255, 250, 205);
+        iFilledRectangle(window_width / 2 - 100, y_pos - 60, 200, 40);
+		iSetColor(44, 44, 44);
+        iText(window_width / 2 - 30, y_pos - 60 + 15, "Medium", GLUT_BITMAP_HELVETICA_18);
+
+        // High Speed
+		iSetColor(255, 250, 205);
+        iFilledRectangle(window_width / 2 - 100, y_pos - 120, 200, 40);
+		iSetColor(44, 44, 44);
+        iText(window_width / 2 - 20, y_pos - 120 + 15, "High", GLUT_BITMAP_HELVETICA_18);
+
+		iSetColor(230, 230, 230);
+		iFilledRectangle(window_width / 2 + 250, window_height / 2 - 320, 100, 40);
+		iSetColor(255, 51, 51);
+		iText(window_width / 2 + 278, window_height / 2 - 305, "Menu", GLUT_BITMAP_HELVETICA_18);
     }
 
 	else if(game_state == controls){
-		// Draw the controls menu
-		iSetColor(44, 51, 29);
-		iFilledRectangle(0, 0, window_width, window_height);
+		iShowBMP(0, 0, "instr.bmp");
+
+		iSetColor(230, 230, 230);
+		iFilledRectangle(window_width / 2 + 250, window_height / 2 - 320, 100, 40);
+		iSetColor(255, 51, 51);
+		iText(window_width / 2 + 278, window_height / 2 - 305, "Menu", GLUT_BITMAP_HELVETICA_18);
+	}
+
+	else if(game_state == score_board){
+		// Draw background
+		iShowBMP(0, 0, "score.bmp");
 
 		// Draw the title
-		iSetColor(245, 245, 220);
-		int title_y = window_height / 2 + 150;
-		iText(window_width / 2 - 45, title_y, "Controls", GLUT_BITMAP_TIMES_ROMAN_24);
+    	iSetColor(245, 245, 220);
+    	iText(window_width / 2 - 60, window_height/2 + 150, "Scoreboard", GLUT_BITMAP_TIMES_ROMAN_24);
 
-		// Controls
-		iSetColor(245, 245, 220);
+		char state[100];
+			if(play_state == classic){
+				strcpy(state, "(Classic)");
+			}
+			else if(play_state == classic_revisited){
+				strcpy(state, "(Classic Revisited)");
+			}
+			else if(play_state == box){
+				strcpy(state, "(Box)");
+			}
+			else if(play_state == campaign){
+				strcpy(state, "(Campaign)");
+			}
 
-		// Up
-		int upY = title_y - 100;
-		iShowBMP(window_width / 2 - 80, upY+5, "up.bmp");
-		iText(window_width / 2 - 30, upY + 15, "Move Up", GLUT_BITMAP_HELVETICA_18);
+    	iText(window_width / 2 + 50, window_height/2 + 150, state, GLUT_BITMAP_9_BY_15);
 
-		// Down
-		int downY = upY - 60;
-		iShowBMP(window_width / 2 - 80, downY+5, "down.bmp");
-		iText(window_width / 2 - 30, downY + 15, "Move Down", GLUT_BITMAP_HELVETICA_18);
+		// Draw table headers
+		iSetColor(255, 215, 0);
+		iText(window_width / 2 - 150, window_height/2 + 100, "Rank", GLUT_BITMAP_HELVETICA_18);
+		iText(window_width / 2 - 30, window_height/2 + 100, "Name", GLUT_BITMAP_HELVETICA_18);
+		iText(window_width / 2 + 100, window_height/2 + 100, "Score", GLUT_BITMAP_HELVETICA_18);
 
-		// Left
-		int leftY = downY - 60;
-		iShowBMP(window_width / 2 - 80, leftY+5, "left.bmp");
-		iText(window_width / 2 - 30, leftY + 15, "Move Left", GLUT_BITMAP_HELVETICA_18);
+    	iSetColor(255, 215, 0);
+    	iLine(window_width / 2 - 160, window_height/2 + 95, window_width / 2 + 160, window_height/2 + 95);
 
-		// Right
-		int rightY = leftY - 60;
-		iShowBMP(window_width / 2 - 80, rightY+5, "right.bmp");
-		iText(window_width / 2 - 30, rightY + 15, "Move Right", GLUT_BITMAP_HELVETICA_18);
+		str_score topScores[5];
+		int cnt = load_score(topScores);
 
-		iText(game_width/2+130, 10, "Press 'M' to go back to Menu", GLUT_BITMAP_9_BY_15);
+		for(int i = 0; i < cnt; i++){
+			int y_coord = window_height / 2 + 60 - i * 50;
+
+			char rank[10];
+			sprintf(rank, "%d.", i + 1);
+			char name[100];
+			strcpy(name, topScores[i].name);
+			char score[10];
+			sprintf(score, "%d", topScores[i].score);
+
+			iSetColor(255, 255, 255);
+
+			// Display Rank, Name, Score
+			iText(window_width / 2 - 140, y_coord, rank, GLUT_BITMAP_HELVETICA_18);
+			iText(window_width / 2 - 30, y_coord, name, GLUT_BITMAP_HELVETICA_18);
+			iText(window_width / 2 + 110, y_coord, score, GLUT_BITMAP_HELVETICA_18);
+		}
+
+		iSetColor(230, 230, 230);
+		iFilledRectangle(window_width / 2 + 250, window_height / 2 - 320, 100, 40);
+		iSetColor(255, 51, 51);
+		iText(window_width / 2 + 278, window_height / 2 - 305, "Menu", GLUT_BITMAP_HELVETICA_18);
 	}
 
 	else if(game_state == start_game){
@@ -214,13 +375,31 @@ void iDraw() {
 			}
 
 			//Draw the score board
-			iSetColor(125, 99, 63);
-			iFilledRectangle(0, game_height, game_width, window_height-game_height);
+			iShowBMP(0, game_height, "score.bmp");
 
 			iSetColor(255, 255, 255);
+			iText(670, game_height + 30, "Score:", GLUT_BITMAP_TIMES_ROMAN_24);
+			iSetColor(255, 215, 0);
 			char scoreText[100];
-			sprintf(scoreText, "Score: %d", score);
-			iText(10, game_height + 30, scoreText, GLUT_BITMAP_TIMES_ROMAN_24);
+			sprintf(scoreText, " %d", score);
+			iText(727, game_height + 30, scoreText, GLUT_BITMAP_TIMES_ROMAN_24);
+			
+			iSetColor(255, 255, 255);
+			iText(10, game_height + 30, "Player: ", GLUT_BITMAP_TIMES_ROMAN_24);
+			iSetColor(255, 215, 0);
+			iText(80, game_height + 30, player_name, GLUT_BITMAP_TIMES_ROMAN_24);
+
+			//Display bonus timer
+			if(is_bonus_active == 1){
+                int remaining_time = (bonus_duration - clock() + bonus_start_time) / 1000; // in seconds
+                if(remaining_time < 0) remaining_time = 0; // Ensure it doesn't go negative
+
+                iText(280, game_height + 30, "Time for BONUS left:", GLUT_BITMAP_9_BY_15);
+				iSetColor(255, 0, 0);
+                char bonus_timer[100];
+                sprintf(bonus_timer, " %d s", remaining_time);
+                iText(460, game_height + 30, bonus_timer, GLUT_BITMAP_9_BY_15);
+            }
 
 			if(play_state == classic_revisited){
 				//Draw the auto snake
@@ -232,13 +411,19 @@ void iDraw() {
 				}
 
 				//Draw the score board
-				iSetColor(125, 99, 63);
-				iFilledRectangle(0, game_height, game_width, window_height-game_height);
+				iShowBMP(0, game_height, "score.bmp");
 
 				iSetColor(255, 255, 255);
+				iText(670, game_height + 30, "Score:", GLUT_BITMAP_TIMES_ROMAN_24);
+				iSetColor(255, 215, 0);
 				char scoreText[100];
-				sprintf(scoreText, "Score: %d", score);
-				iText(10, game_height + 30, scoreText, GLUT_BITMAP_TIMES_ROMAN_24);
+				sprintf(scoreText, " %d", score);
+				iText(727, game_height + 30, scoreText, GLUT_BITMAP_TIMES_ROMAN_24);
+				
+				iSetColor(255, 255, 255);
+				iText(10, game_height + 30, "Player: ", GLUT_BITMAP_TIMES_ROMAN_24);
+				iSetColor(255, 215, 0);
+				iText(80, game_height + 30, player_name, GLUT_BITMAP_TIMES_ROMAN_24);
 			}
 
 			else if(play_state == box){
@@ -272,17 +457,27 @@ void iDraw() {
 			}		
 		}
 
-		else{
-			iSetColor(0, 0, 0); // Black background
-			iFilledRectangle(0, 0, game_width, game_height);
+		else if(is_gameover == 1){
+			iSetColor(0, 0, 0);
+			iFilledRectangle(0, 0, window_width, window_height);
+			
 			iSetColor(255, 0, 0);
-			iText(game_width/2-60, game_height/2+50, "Game Over :(", GLUT_BITMAP_TIMES_ROMAN_24);
-			char scoreText[100];
-			sprintf(scoreText, "Score: %d", score);
-			iText(game_width/2-40, game_height/2+10, scoreText, GLUT_BITMAP_TIMES_ROMAN_24);
+			iText(window_width/2 - 70, window_height/2 + 50, "GAME OVER :'(", GLUT_BITMAP_TIMES_ROMAN_24);
+			
+			iSetColor(255, 215, 0);
+			char score_text[40];
+			sprintf(score_text, "Score: %d", score);
+			iText(window_width/2 - 35, window_height/2, score_text, GLUT_BITMAP_TIMES_ROMAN_24);
+			
+			iSetColor(255, 51, 51);
+			iFilledRectangle(window_width/2 - 125, window_height/2 - 75, 120, 30);
 			iSetColor(255, 255, 255);
-			iText(game_width/2+130, 40, "Press 'M' to go back to Menu", GLUT_BITMAP_9_BY_15);
-			iText(game_width/2+230, 10, "Press 'Q' to exit", GLUT_BITMAP_9_BY_15);
+			iText(window_width/2 - 120, window_height/2 - 65, "Play Again :D", GLUT_BITMAP_HELVETICA_18);
+			
+			iSetColor(255, 51, 51);
+			iFilledRectangle(window_width/2 + 45, window_height/2 - 75, 120, 30);
+			iSetColor(255, 255, 255);
+			iText(window_width/2 + 60, window_height/2 - 65, "Main Menu", GLUT_BITMAP_HELVETICA_18);
 		}
 	}
 }
@@ -302,23 +497,41 @@ void iMouseMove(int mx, int my) {
 void iMouse(int button, int state, int mx, int my) {
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
         if(game_state == menu){
-            // Start Game Button
-            if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= window_height / 2 - 125 && my <= window_height / 2 - 85){
-                game_state = start_game;
-				game_start();
-            }
-            // High Score Button
-            else if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= window_height / 2 - 185 && my <= window_height / 2 - 145){
-                game_state = high_score;
-            }
-            // Game Type Button
-            else if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= window_height / 2 - 245 && my <= window_height / 2 - 205){
-                game_state = game_type;
-            }
-            // Controls Button
-            else if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= window_height / 2 - 305 && my <= window_height / 2 - 265){
-                game_state = controls;
-            }
+			if(name_input_mode == 1){
+				if(mx >= window_width / 2 + 250 && mx <= window_width / 2 + 350 &&
+                   my >= window_height / 2 - 320 && my <= window_height / 2 - 280){
+                    name_input_mode = 0;
+                    game_state = menu;
+                }
+			}
+			else{
+				//Start Game Button
+				if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= window_height / 2 - 65 && my <= window_height / 2 - 25){
+					name_input_mode = 1;
+					name_len = 0;
+					player_name[0] = '\0';
+					if(mx >= window_width / 2 + 250 && mx <= window_width / 2 + 350 && my >= window_height / 2 - 320 && my <= window_height / 2 - 280){
+						name_input_mode = 0;
+						game_state = menu;
+					}
+				}
+				// Score Board Button
+				else if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= window_height / 2 - 125 && my <= window_height / 2 - 85){
+					game_state = score_board;
+				}
+				// Game Type Button
+				else if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= window_height / 2 - 185 && my <= window_height / 2 - 145){
+					game_state = game_type;
+				}
+				// Speed Level Button
+				else if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= window_height / 2 - 245 && my <= window_height / 2 - 205){
+					game_state = speed_level;
+				}
+				// Controls Button
+				else if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= window_height / 2 - 305 && my <= window_height / 2 - 265){
+					game_state = controls;
+				}
+			}
         }
         // Game Type Selection Interaction
         else if (game_state == game_type) {
@@ -349,6 +562,50 @@ void iMouse(int button, int state, int mx, int my) {
                 game_state = menu;  // Return to main menu
             }
         }
+
+		else if(game_state == speed_level){
+			// Low Speed
+			int y_pos = window_height / 2 + 50;
+			if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= y_pos && my <= y_pos + 40){
+				snake_speed = 200;
+				iPauseTimer(s);
+				s = iSetTimer(snake_speed, snake_move);
+				game_state = menu;
+				// printf("Speed: %d\n", snake_speed);
+			}
+			// Medium Speed
+			if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= y_pos - 60 && my <= y_pos - 60 + 40){
+				snake_speed = 150;
+				game_state = menu;
+				iPauseTimer(s);
+				s = iSetTimer(snake_speed, snake_move);
+				// printf("Speed: %d\n", snake_speed);
+			}
+			// High Speed
+			if(mx >= window_width / 2 - 100 && mx <= window_width / 2 + 100 && my >= y_pos - 120 && my <= y_pos - 120 + 40){
+				snake_speed = 100;
+				game_state = menu;
+				iPauseTimer(s);
+				s = iSetTimer(snake_speed, snake_move);
+				// printf("Speed: %d\n", snake_speed);
+			}
+		}
+
+		if(is_gameover == 1){
+			// Play Again Button
+			if(mx >= window_width/2 - 125 && mx <= window_width/2 - 5 && my >= window_height/2 - 75 && my <= window_height/2 - 45){
+				game_start();
+				game_state = start_game;
+			}
+			// Main Menu Button
+			else if(mx >= window_width/2 + 45 && mx <= window_width/2 + 165 && my >= window_height/2 - 75 && my <= window_height/2 - 45){
+				game_state = menu;
+			}
+		}
+		if(mx >= window_width / 2 + 250 && mx <= window_width / 2 + 350 &&
+            my >= window_height / 2 - 320 && my <= window_height / 2 - 280){
+            game_state = menu;
+        }
     }
 }
 
@@ -357,25 +614,46 @@ void iMouse(int button, int state, int mx, int my) {
 	key- holds the ASCII value of the key pressed.
 	*/
 void iKeyboard(unsigned char key) {
-	if (key == 'q' || key == 'Q') {
-		if(game_state == start_game){
+	if (name_input_mode == 1) {
+        if (key == '\r') {
+            name_input_mode = 0;
+            printf("Player Name: %s\n", player_name);
+            game_start();
+			game_state = start_game;
+        }
+        else if (key == '\b') {
+            if (name_len > 0) {
+                player_name[name_len - 1] = '\0';
+                name_len--;
+            }
+        }
+        else {
+            player_name[name_len] = key;
+            name_len++;
+            player_name[name_len] = '\0';
+        }
+    }
+	else{
+		if (key == 'q' || key == 'Q') {
+			if(game_state == start_game){
+				game_state = menu;
+			}
+			else exit(0);
+		}
+		if(key == 'm' || key == 'M'){
 			game_state = menu;
 		}
-		else exit(0);
-    }
-	if(key == 'm' || key == 'M'){
-		game_state = menu;
+		if(key == ' ' && is_paused == 0){
+			is_paused = 1;
+			iPauseTimer(s);
+			iPauseTimer(as);
+		}
+		else if(key == ' ' && is_paused == 1){
+			is_paused = 0;
+			iResumeTimer(s);
+			if(play_state == classic_revisited)iResumeTimer(as);
+		}
 	}
-    if(key == ' ' && is_paused == 0){
-        is_paused = 1;
-		iPauseTimer(s);
-		iPauseTimer(as);
-    }
-    else if(key == ' ' && is_paused == 1){
-        is_paused = 0;
-		iResumeTimer(s);
-		if(play_state == classic_revisited)iResumeTimer(as);
-    }
 }
 
 /*
@@ -405,7 +683,7 @@ void iSpecialKeyboard(unsigned char key) {
 
 int main() {
 	srand(time(0));
-	iInitialize(window_width, window_height, "Snake Game V1.1");
+	iInitialize(window_width, window_height, "Snake Game");
 	return 0;
 }
 
@@ -577,38 +855,6 @@ void snake_len_inc(){
 			is_bonus_active = 0;
 		}
 	}
-	// if(score >= 20 && checker == 0){
-	// 	snake_speed -= 25;
-	// 	s = iSetTimer(snake_speed, snake_move);
-	// 	printf("Called\n");
-	// 	as = iSetTimer(snake_speed, auto_snake_move);
-	// 	printf("Called\n");
-	// 	checker = 1;
-	// }
-	// if(score >= 40 && checker == 1){
-	// 	snake_speed -= 25;
-	// 	s = iSetTimer(snake_speed, snake_move);
-	// 	as = iSetTimer(snake_speed, auto_snake_move);
-	// 	checker = 0;
-	// }
-	// if(score >= 600 && checker == 0){
-	// 	snake_speed -= 25;
-	// 	s = iSetTimer(snake_speed, snake_move);
-	// 	as = iSetTimer(snake_speed, auto_snake_move);
-	// 	checker = 1;
-	// }
-	// if(score >= 800 && checker == 1){
-	// 	snake_speed -= 25;
-	// 	s = iSetTimer(snake_speed, snake_move);
-	// 	as = iSetTimer(snake_speed, auto_snake_move);
-	// 	checker = 0;
-	// }
-	// if(score >= 1000 && checker == 0){
-	// 	snake_speed -= 25;
-	// 	s = iSetTimer(snake_speed, snake_move);
-	// 	as = iSetTimer(snake_speed, auto_snake_move);
-	// 	checker = 1;
-	// }
 }
 
 void init_auto_snake(){
@@ -743,6 +989,13 @@ void collision(){
 			is_gameover = 1;
 		}
 	}
+
+	if(is_gameover == 1 && is_score_updated == 0){
+		update_score(player_name, score);
+		is_score_updated = 1;
+		iPauseTimer(s);
+		iPauseTimer(as);
+	}
 }
 
 void game_start(){
@@ -752,6 +1005,7 @@ void game_start(){
     direction = right;
 	food_eat_cnt = 0;
 	is_bonus_active = 0;
+	is_score_updated = 0;
 
 	gen_food();
 	init_snake();
@@ -764,4 +1018,55 @@ void game_start(){
 	else{
 		iPauseTimer(as);
 	}
+}
+
+int load_score(str_score topScores[]){
+	FILE *fp = NULL;
+	if(play_state == 0) fp = fopen("score0.txt", "r");
+	else if(play_state == 1) fp = fopen("score1.txt", "r");
+	else if(play_state == 2) fp = fopen("score2.txt", "r");
+	else if(play_state == 3) fp = fopen("score3.txt", "r");
+	
+	int cnt = 0;
+	if(fp != NULL){
+		while(fscanf(fp, "%s %d", topScores[cnt].name, &topScores[cnt].score) == 2){
+			cnt++;
+		}
+		fclose(fp);
+	}
+	return cnt;
+}
+
+void save_score(str_score topScores[], int score_cnt){
+	FILE *fp = NULL;
+	if(play_state == 0) fp = fopen("score0.txt", "w");
+	else if(play_state == 1) fp = fopen("score1.txt", "w");
+	else if(play_state == 2) fp = fopen("score2.txt", "w");
+	else if(play_state == 3) fp = fopen("score3.txt", "w");
+
+	for(int i=0; i<score_cnt; i++){
+		fprintf(fp, "%s %d\n", topScores[i].name, topScores[i].score);
+	}
+	fclose(fp);
+}
+
+void update_score(char player_name[], int score){
+	str_score topScores[score_cnt+1];
+	int scr_cnt = load_score(topScores);
+	
+	strcpy(topScores[scr_cnt].name, player_name);
+	topScores[scr_cnt].score = score;
+	scr_cnt++;
+
+	for(int i=0; i<scr_cnt-1; i++){
+		for(int j=i+1; j<scr_cnt; j++){
+			if(topScores[i].score < topScores[j].score){
+				str_score temp = topScores[i];
+				topScores[i] = topScores[j];
+				topScores[j] = temp;
+			}
+		}
+	}
+	int score_save = (scr_cnt < score_cnt) ? scr_cnt : score_cnt;
+	save_score(topScores, score_save);
 }
